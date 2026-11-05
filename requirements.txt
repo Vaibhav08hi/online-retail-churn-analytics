@@ -1,0 +1,9 @@
+pandas
+sqlalchemy
+pymysql
+scikit-learn
+matplotlib
+seaborn
+openpyxl
+jupyter
+python-dotenv
