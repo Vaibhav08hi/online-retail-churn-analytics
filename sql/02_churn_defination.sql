@@ -1,4 +1,7 @@
--- Reference date: day after the last invoice in the data - '2011-12-10'
+-- latest date - '2011-12-09'
+--earliest invoice_date - '2009-12-01'
+--Reference date: day after the last invoice in the data - '2011-12-10'
+
 CREATE OR REPLACE VIEW customer_summary AS
 SELECT
     o.customer_id,
