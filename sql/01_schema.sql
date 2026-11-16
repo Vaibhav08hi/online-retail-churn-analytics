@@ -1,4 +1,4 @@
--- Drop tables if they exist 
+-- Drop tables if exist 
 DROP TABLE IF EXISTS returns;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
