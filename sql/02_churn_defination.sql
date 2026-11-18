@@ -83,3 +83,7 @@ SELECT MIN(gap_days) AS min_gap, MAX(gap_days) AS max_gap FROM order_gaps;
 SELECT COUNT(*) AS gaps FROM order_gaps;
 SELECT COUNT(*) AS order_days
 FROM (SELECT DISTINCT customer_id, DATE(invoice_date) FROM orders) AS d;
+
+CREATE OR REPLACE VIEW customer_churn AS 
+SELECT 
+    * , IF(days_since_last_purchase > 180  , 1,0) AS CHURNED FROM customer_summary c ;
