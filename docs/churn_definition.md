@@ -45,16 +45,16 @@ would be stricter but would leave less data to observe the outcome.
 
 ## 4. Results
 
-- **Overall churn rate:** [overall churn rate]% ([churned] of 5,852 customers)
+- **Overall churn rate:** 46.99 % (2750 of 5,852 customers)
 - **One-time buyers:** 1,618 customers have a single invoice, and 1,673 have only one order day (so no gaps). That is about 29% of all customers.
 
 Churn by number of orders:
 
 | Orders | Customers | Churn rate |
 |---|---|---|
-| 1 order | [1618] | [74.91]% |
-| 2-3 orders | [1604] | [55.17]% |
-| 4+ orders | [2630] | [24.83]% |
+| 1 order | 1618 | 74.91% |
+| 2-3 orders | 1604 | 55.17% |
+| 4+ orders | 2630 | 24.83% |
 
 - **Overall churn rate:** 46.99% (2,750 of 5,852 customers)
 
@@ -95,13 +95,13 @@ Churn by year of first purchase:
 
 | Threshold (days) | Churned | Active | Churn rate |
 |---|---|---|---|
-| 60 | [3502] | [2350] | [59.84]% |
-| 90 | [2981] | [2871] | [50.94]% |
-| 120 | [2750] | [3102] | [46.99]% |
-| 180 | [2389] | [3463] | [40.82]% |
+| 60 | 3502 | 2350 | 59.84% |
+| 90 | 2981 | 2871 | 50.94% |
+| 120 | 2750 | 3102 | 46.99% |
+| 180 | 2389 | 3463 | 40.82% |
 
 The churn rate falls as the threshold rises, as expected. Moving from 60 to 180 days changes the rate by
-[19.02] percentage points.
+19.02 percentage points.
 The 120-day row matches the overall churn rate in section 4.
 
 ## 6. Time-based dataset for the prediction model
@@ -112,11 +112,11 @@ The snapshot churn flag cannot be used to train a model, because it labels custo
 - **Cutoff date:** 2011-08-12 (reference date minus 120 days)
 - **Feature period:** orders before the cutoff only
 - **Label period:** 2011-08-12 to 2011-12-09 (120 days). A customer is labelled churned (1) if they placed no order in it, otherwise 0.
-- **Eligible customers:** those with at least one order before the cutoff: [5156] customers ([696] new customers excluded)
+- **Eligible customers:** those with at least one order before the cutoff: 5156 customers (696 new customers excluded)
 - **Features:** recency, frequency, total spend, average order value, tenure, distinct products, orders in the last 90 days, return count and country
-- **Result:** `churn_training_data` has [5156] rows with a label rate of [53.12]%.
+- **Result:** `churn_training_data` has 5156 rows with a label rate of 53.12%.
 
-The label rate is [lower] than the snapshot churn rate because the label period covers the
+The label rate is lower than the snapshot churn rate because the label period covers the
 Christmas buying season, when many customers return. **Leakage check:** the latest order date used
 in any feature is 2011-08-11, before the cutoff.
 
