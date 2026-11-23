@@ -33,3 +33,39 @@ FROM (
     FROM orders
 ) am
 JOIN customer_summary cs ON cs.customer_id = am.customer_id;
+
+
+-- Checks for step 2
+
+-- 1. Month 0 rows (expect 5852, one per customer)
+SELECT COUNT(*) AS month_0_rows
+FROM customer_months
+WHERE months_since_start = 0;
+
+-- 2. Range of months_since_start (expect min 0, max 24)
+SELECT MIN(months_since_start) AS min_months, MAX(months_since_start) AS max_months
+FROM customer_months;
+
+-- 3. Total rows in the view
+SELECT COUNT(*) AS total_rows FROM customer_months;
+
+-- 4. Month 0 rows per cohort must equal the cohort sizes from step 1
+SELECT cohort_month, COUNT(*) AS customers
+FROM customer_months
+WHERE months_since_start = 0
+GROUP BY cohort_month
+ORDER BY cohort_month;
+
+-- 5. Any customer without a month 0 row? (expect 0 rows)
+SELECT customer_id
+FROM customer_months
+GROUP BY customer_id
+HAVING MIN(months_since_start) <> 0;
+
+-- 6. Hand check: look at one customer here, then compare with their invoices
+SELECT * FROM customer_months WHERE customer_id = (SELECT MIN(customer_id) FROM customer_summary) ORDER BY active_month;
+
+SELECT customer_id, invoice_no, invoice_date
+FROM orders
+WHERE customer_id = (SELECT MIN(customer_id) FROM customer_summary)
+ORDER BY invoice_date;
