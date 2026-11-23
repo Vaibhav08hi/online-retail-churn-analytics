@@ -93,3 +93,33 @@ WHERE cm.months_since_start BETWEEN 0 AND 12
   AND cm.active_month < '2011-12'
 GROUP BY cm.cohort_month, cm.months_since_start, cs.cohort_size;
 
+
+-- Checks for step 3
+
+-- 1. Month 0 must be 100% for every cohort (expect 0 rows)
+SELECT cohort_month, retention_pct
+FROM cohort_retention
+WHERE months_since_start = 0 AND retention_pct <> 100;
+
+-- 2. Retention must stay between 0 and 100
+SELECT MIN(retention_pct) AS min_pct, MAX(retention_pct) AS max_pct
+FROM cohort_retention;
+
+-- 3. Number of cohorts and total rows (expect 24 cohorts, 234 rows)
+SELECT COUNT(DISTINCT cohort_month) AS cohorts, COUNT(*) AS total_rows
+FROM cohort_retention;
+
+-- 4. Triangle shape: cells per cohort (13 for the first 12 cohorts, then 12, 11 ... 1)
+SELECT cohort_month, COUNT(*) AS cells, MAX(months_since_start) AS last_month
+FROM cohort_retention
+GROUP BY cohort_month
+ORDER BY cohort_month;
+
+-- 5. Cohort sizes must match step 1 (the 2011-12 cohort is missing here)
+SELECT SUM(cohort_size) AS total_in_view
+FROM (SELECT DISTINCT cohort_month, cohort_size FROM cohort_retention) t;
+
+-- 6. Look at one cohort across months 0 to 12
+SELECT * FROM cohort_retention
+WHERE cohort_month = '2010-01'
+ORDER BY months_since_start;
