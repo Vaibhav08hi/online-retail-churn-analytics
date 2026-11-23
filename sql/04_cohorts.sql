@@ -34,7 +34,6 @@ FROM (
 ) am
 JOIN customer_summary cs ON cs.customer_id = am.customer_id;
 
-
 -- Checks for step 2
 
 -- 1. Month 0 rows (expect 5852, one per customer)
@@ -69,3 +68,28 @@ SELECT customer_id, invoice_no, invoice_date
 FROM orders
 WHERE customer_id = (SELECT MIN(customer_id) FROM customer_summary)
 ORDER BY invoice_date;
+
+
+-- STEP 3: Retention by cohort and month since start (long format)
+-- Months 0 to 12 only
+-- December 2011 is excluded as an active month (partial month, data ends 2011-12-09)
+-- so the 2011-12 cohort drops out and each cohort stops at 2011-11
+
+CREATE OR REPLACE VIEW cohort_retention AS
+SELECT
+    cm.cohort_month,
+    cm.months_since_start,
+    cs.cohort_size,
+    COUNT(DISTINCT cm.customer_id)                                       AS active_customers,
+    ROUND(100 * COUNT(DISTINCT cm.customer_id) / cs.cohort_size, 2)      AS retention_pct
+FROM customer_months cm
+JOIN (
+    SELECT cohort_month, COUNT(*) AS cohort_size
+    FROM customer_months
+    WHERE months_since_start = 0
+    GROUP BY cohort_month
+) cs ON cs.cohort_month = cm.cohort_month
+WHERE cm.months_since_start BETWEEN 0 AND 12
+  AND cm.active_month < '2011-12'
+GROUP BY cm.cohort_month, cm.months_since_start, cs.cohort_size;
+
