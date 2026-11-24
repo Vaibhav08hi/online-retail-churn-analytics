@@ -204,3 +204,65 @@ WHERE cohort_month = '2010-01'
 ORDER BY months_since_start;
 
 
+-- STEP 4B: Repeat purchase rate by cohort
+-- Repeat = two or more different order days
+-- The 90-day rate is only shown for cohorts through 2011-08, because later cohorts
+-- have not had 90 full days of data (the data ends 2011-12-09)
+
+
+CREATE OR REPLACE VIEW customer_order_days AS
+SELECT customer_id, COUNT(DISTINCT DATE(invoice_date)) AS order_days
+FROM orders
+GROUP BY customer_id;
+
+CREATE OR REPLACE VIEW cohort_repeat_rate AS
+SELECT
+    cohort_month,
+    COUNT(*)                                       AS cohort_size,
+    SUM(is_repeat)                                 AS repeat_customers,
+    COUNT(*) - SUM(is_repeat)                      AS one_time_customers,
+    ROUND(100 * AVG(is_repeat), 2)                 AS repeat_rate_pct,
+    CASE WHEN cohort_month <= '2011-08'
+         THEN ROUND(100 * AVG(repeat_90d), 2) END  AS repeat_within_90d_pct
+FROM (
+    SELECT
+        DATE_FORMAT(cs.first_purchase_date, '%Y-%m')  AS cohort_month,
+        cs.customer_id,
+        (cod.order_days >= 2)                         AS is_repeat,
+        (r90.customer_id IS NOT NULL)                 AS repeat_90d
+    FROM customer_summary cs
+    JOIN customer_order_days cod ON cod.customer_id = cs.customer_id
+    LEFT JOIN (
+        SELECT DISTINCT o.customer_id
+        FROM orders o
+        JOIN customer_summary s ON s.customer_id = o.customer_id
+        WHERE DATE(o.invoice_date) > s.first_purchase_date
+          AND DATE(o.invoice_date) <= s.first_purchase_date + INTERVAL 90 DAY
+    ) r90 ON r90.customer_id = cs.customer_id
+) x
+GROUP BY cohort_month;
+
+
+-- Checks for part B
+
+-- 1. Totals (expect 5852 customers, 4179 repeat, 1673 one-time, about 71.41%)
+SELECT
+    SUM(cohort_size)                                  AS customers,
+    SUM(repeat_customers)                             AS repeat_customers,
+    SUM(one_time_customers)                           AS one_time_customers,
+    ROUND(100 * SUM(repeat_customers) / SUM(cohort_size), 2) AS overall_repeat_rate_pct
+FROM cohort_repeat_rate;
+
+-- 2. Repeat + one-time must equal cohort size for every cohort (expect 0 rows)
+SELECT cohort_month
+FROM cohort_repeat_rate
+WHERE repeat_customers + one_time_customers <> cohort_size;
+
+-- 3. The 90-day rate must be NULL after 2011-08
+SELECT cohort_month, repeat_within_90d_pct
+FROM cohort_repeat_rate
+WHERE cohort_month >= '2011-08'
+ORDER BY cohort_month;
+
+-- 4. Full table
+SELECT * FROM cohort_repeat_rate ORDER BY cohort_month;
