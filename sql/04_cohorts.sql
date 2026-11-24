@@ -123,3 +123,84 @@ FROM (SELECT DISTINCT cohort_month, cohort_size FROM cohort_retention) t;
 SELECT * FROM cohort_retention
 WHERE cohort_month = '2010-01'
 ORDER BY months_since_start;
+
+
+-- STEP 4A: Revenue by cohort and month since start
+
+
+-- Revenue per customer per calendar month (sales only)
+CREATE OR REPLACE VIEW customer_month_revenue AS
+SELECT
+    o.customer_id,
+    CONCAT(YEAR(o.invoice_date), '-', LPAD(MONTH(o.invoice_date), 2, '0')) AS active_month,
+    ROUND(SUM(oi.revenue), 2)                                              AS revenue
+FROM orders o
+JOIN order_items oi ON oi.invoice_no = o.invoice_no
+GROUP BY o.customer_id, active_month;
+
+-- Revenue by cohort, months 0 to 12, excluding the partial month 2011-12
+CREATE OR REPLACE VIEW cohort_revenue AS
+SELECT
+    t.cohort_month,
+    t.months_since_start,
+    cs.cohort_size,
+    t.revenue,
+    ROUND(t.revenue / cs.cohort_size, 2) AS revenue_per_customer,
+    ROUND(SUM(t.revenue) OVER (PARTITION BY t.cohort_month
+                               ORDER BY t.months_since_start) / cs.cohort_size, 2)
+                                         AS cumulative_revenue_per_customer
+FROM (
+    SELECT
+        cm.cohort_month,
+        cm.months_since_start,
+        ROUND(SUM(r.revenue), 2) AS revenue
+    FROM customer_months cm
+    JOIN customer_month_revenue r
+      ON r.customer_id = cm.customer_id AND r.active_month = cm.active_month
+    WHERE cm.months_since_start BETWEEN 0 AND 12
+      AND cm.active_month < '2011-12'
+    GROUP BY cm.cohort_month, cm.months_since_start
+) t
+JOIN (
+    SELECT cohort_month, COUNT(*) AS cohort_size
+    FROM customer_months
+    WHERE months_since_start = 0
+    GROUP BY cohort_month
+) cs ON cs.cohort_month = t.cohort_month;
+
+
+-- Checks for part A
+
+-- 1. Total revenue must equal 17068567.97
+SELECT ROUND(SUM(revenue), 2) AS total_revenue FROM customer_month_revenue;
+
+-- 2. Same total through the join to customer_months, with no month filters
+SELECT ROUND(SUM(r.revenue), 2) AS total_via_join
+FROM customer_months cm
+JOIN customer_month_revenue r
+  ON r.customer_id = cm.customer_id AND r.active_month = cm.active_month;
+
+-- 3. Revenue inside cohort_revenue (lower than the total: no 2011-12, no month 13+)
+SELECT ROUND(SUM(revenue), 2) AS revenue_in_view FROM cohort_revenue;
+
+-- 4. Cumulative revenue must never go down within a cohort (expect 0)
+SELECT COUNT(*) AS decreasing_rows
+FROM (
+    SELECT cumulative_revenue_per_customer AS cum,
+           LAG(cumulative_revenue_per_customer) OVER (PARTITION BY cohort_month
+                                                      ORDER BY months_since_start) AS prev_cum
+    FROM cohort_revenue
+) x
+WHERE cum < prev_cum;
+
+-- 5. Month 0 revenue per customer must be positive (expect 0)
+SELECT COUNT(*) AS bad_month_0
+FROM cohort_revenue
+WHERE months_since_start = 0 AND revenue_per_customer <= 0;
+
+-- 6. One cohort across months 0 to 12
+SELECT * FROM cohort_revenue
+WHERE cohort_month = '2010-01'
+ORDER BY months_since_start;
+
+
