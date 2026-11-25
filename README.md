@@ -88,31 +88,65 @@ Key decisions:
 | order_items | 776,577 | One row per product line on an invoice |
 | returns | 18,390 | One row per returned line |
 
+## Churn definition
+ 
+The retailer is non-contractual: customers never cancel, they just stop buying. A customer is
+**churned if 120 or more days have passed since their last purchase**, measured from a reference date
+of 2011-12-10 (the day after the last invoice). Purchases are counted from sales only.
+ 
+- **Why 120 days:** across 27,026 gaps between consecutive orders, the median gap is 32 days, the 75th percentile is 70 days and the 90th is 148 days. A 90-day rule would flag 19.40% of normal gaps as churn, while 120 days flags 13.47%.
+- **Result:** 46.99% churn rate (2,750 of 5,852 customers).
+- **Prediction dataset:** to avoid data leakage, a separate time-based dataset uses a cutoff of 2011-08-12. Features come from orders before the cutoff, and the label is whether the customer ordered in the following 120 days.
+Full reasoning, sensitivity analysis and limitations: [docs/churn_definition.md](docs/churn_definition.md)
+ 
+## Cohort and retention analysis
+ 
+Customers are grouped by the month of their first purchase. For each cohort, SQL views measure
+retention, revenue and repeat purchase rate over the following 12 months.
+ 
+| Cohort measure | Result |
+|---|---|
+| Customers with two or more order days | 4,179 of 5,852 (71.41%) |
+| Customers with a single order day | 1,673 (28.59%) |
+| Jan 2010 cohort: revenue per customer in month 0 | 429.02 |
+| Jan 2010 cohort: cumulative revenue per customer at month 12 | 2,190.35 |
+ 
+Full results, caveats and findings: [docs/cohort_analysis.md](docs/cohort_analysis.md)
+
 ## Project structure
 
 ```
-├── data/
-│   ├── raw/                # raw dataset (not tracked by Git)
-│   ├── processed/          # cleaned CSVs (not tracked by Git)
-│   └── cleaning_log.csv
-├── notebooks/              # exploration and data audit
-├── sql/
-│   └── 01_schema.sql       # database schema
-├── src/
-│   ├── clean_data.py
-│   ├── load_to_mysql.py
-│   └── validate.py
-├── run_pipeline.py
-├── requirements.txt
-└── .env.example
+|-- data/
+|   |-- raw/                      # raw dataset (not tracked by Git)
+|   |-- processed/                # cleaned CSVs (not tracked by Git)
+|   |-- cleaning_log.csv
+|   |-- cohort_retention.csv
+|   |-- cohort_revenue.csv
+|   `-- cohort_repeat_rate.csv
+|-- docs/
+|   |-- churn_definition.md
+|   `-- cohort_analysis.md
+|-- notebooks/                    # exploration and data audit
+|-- sql/
+|   |-- 01_schema.sql             # database schema
+|   |-- 02_churn_definition.sql   # customer summary, churn flag, sensitivity
+|   |-- 03_training_data.sql      # time-based dataset for the model
+|   `-- 04_cohorts.sql            # cohort retention, revenue, repeat rate
+|-- src/
+|   |-- clean_data.py
+|   |-- load_to_mysql.py
+|   `-- validate.py
+|-- run_pipeline.py
+|-- requirements.txt
+|-- .env.example
 ```
 
 ## Roadmap
 
 - [x] Data audit and cleaning
 - [x] Python to MySQL pipeline with validation
-- [ ] Churn definition and sensitivity analysis
-- [ ] SQL cohort and retention analysis
+- [x] Churn definition and sensitivity analysis
+- [x] SQL cohort and retention analysis
 - [ ] RFM segmentation and customer lifetime value
 - [ ] Power BI and Tableau dashboards
 - [ ] Churn prediction model
