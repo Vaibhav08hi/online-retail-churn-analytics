@@ -127,7 +127,6 @@ ORDER BY months_since_start;
 
 -- STEP 4A: Revenue by cohort and month since start
 
-
 -- Revenue per customer per calendar month (sales only)
 CREATE OR REPLACE VIEW customer_month_revenue AS
 SELECT
